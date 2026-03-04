@@ -22,6 +22,7 @@ class Word2VecEmbedding(EmbeddingModel):
 			epochs: int = 5,
 			batch_size: int = 1024,
 			learning_rate: float = 1e-2,
+			min_freq: int = 0,
 			vector_size: Optional[int] = None,
 	):
 		if vector_size is not None:
@@ -38,6 +39,8 @@ class Word2VecEmbedding(EmbeddingModel):
 			raise ValueError("batch_size must be > 0")
 		if learning_rate <= 0:
 			raise ValueError("learning_rate must be > 0")
+		if min_freq < 0:
+			raise ValueError("min_freq must be >= 0")
 
 		self.embedding_dim = int(embedding_dim)
 		self.vector_size = int(embedding_dim)
@@ -46,6 +49,7 @@ class Word2VecEmbedding(EmbeddingModel):
 		self.epochs = int(epochs)
 		self.batch_size = int(batch_size)
 		self.learning_rate = float(learning_rate)
+		self.min_freq = int(min_freq)
 
 		self.vocab_index = {}
 		self.index_vocab = {}
@@ -57,7 +61,10 @@ class Word2VecEmbedding(EmbeddingModel):
 
 	def _build_vocab(self, corpus):
 		token_counts = Counter(token for sentence in corpus for token in sentence)
-		vocab_tokens = list(token_counts.keys())
+		if self.min_freq == 0:
+			vocab_tokens = list(token_counts.keys())
+		else:
+			vocab_tokens = [token for token, count in token_counts.items() if count >= self.min_freq]
 		vocab_tokens = sorted(vocab_tokens, key=lambda token: (-token_counts[token], token))
 
 		self.vocab_index = {token: idx for idx, token in enumerate(vocab_tokens)}
@@ -65,7 +72,7 @@ class Word2VecEmbedding(EmbeddingModel):
 		self.token_counts = np.array([token_counts[token] for token in vocab_tokens], dtype=np.float64)
 
 		if len(vocab_tokens) == 0:
-			raise ValueError("No tokens in vocabulary")
+			raise ValueError("No tokens in vocabulary after min_freq filtering")
 
 		weights = np.power(self.token_counts, 0.75)
 		weights_sum = float(weights.sum())
@@ -148,7 +155,7 @@ class Word2VecEmbedding(EmbeddingModel):
 		# Fill them with small random values
 		bound = 0.5 / self.embedding_dim
 		nn.init.uniform_(input_embed.weight, -bound, bound)
-		nn.init.zeros_(output_embed.weight)
+		nn.init.uniform_(output_embed.weight, -bound, bound)
 
 		if optimizer_name == "sgd":
 			optimizer = torch.optim.SGD(
@@ -280,6 +287,7 @@ class Word2VecEmbedding(EmbeddingModel):
 			"epochs": self.epochs,
 			"batch_size": self.batch_size,
 			"learning_rate": self.learning_rate,
+			"min_freq": self.min_freq,
 			"vocab_index": self.vocab_index,
 			"index_vocab": self.index_vocab,
 			"token_counts": self.token_counts,
@@ -301,6 +309,7 @@ class Word2VecEmbedding(EmbeddingModel):
 			epochs=data["epochs"],
 			batch_size=data["batch_size"],
 			learning_rate=data["learning_rate"],
+			min_freq=data.get("min_freq", 0),
 		)
 
 		model.vocab_index = data["vocab_index"]
@@ -325,17 +334,22 @@ class Word2VecEmbedding(EmbeddingModel):
 if __name__ == "__main__":
 	# Example usage
 	corpus = [[token.lower() for token in sentence] for sentence in brown.sents()]
-	# model = Word2VecEmbedding(
-	# 	embedding_dim=100,
-	# 	window_size=2,
-	# 	num_negatives=5,
-	# 	epochs=5,
-	# 	batch_size=2048,
-	# 	learning_rate=0.01,
-	# )
-	# model.train(corpus, show_progress=True, device="cuda" if torch.cuda.is_available() else "cpu")
-	# model.save(f"./embeddings/word2vec{model.window_size}.pt")
-	model = Word2VecEmbedding.load("./embeddings/word2vec2.pt")
+	model = Word2VecEmbedding(
+		embedding_dim=100,
+		window_size=4,
+		num_negatives=5,
+		epochs=8,
+		batch_size=2048,
+		learning_rate=0.003,
+		min_freq=5,
+	)
+	model.train(
+		corpus,
+		show_progress=True,
+		device="cuda" if torch.cuda.is_available() else "cpu",
+	)
+	model.save(f"./embeddings/word2vec{model.window_size}.pt")
+	# model = Word2VecEmbedding.load("./embeddings/word2vec2.pt")
 
 	query = "woman" if "woman" in model.vocab_index else next(iter(model.vocab_index))
 	tokens, scores = model.most_similar(query, topn=10)
@@ -356,9 +370,9 @@ if __name__ == "__main__":
 		return [], filtered[:topn]
 
 	analogy_cases = [
-		("1. Paris : France :: Delhi : ? (Syntactic/Capital)", "paris", "france", "delhi"),
-		("2. King : Man :: Queen : ? (Semantic/Gender)", "king", "man", "queen"),
-		("3. Swim : Swimming :: Run : ? (Syntactic/Tense)", "swim", "swimming", "run"),
+		("1. paris : france :: india : ? (Syntactic/Capital)", "paris", "france", "india"),
+		("2. king : man :: queen : ? (Semantic/Gender)", "king", "man", "queen"),
+		("3. swim : swimming :: run : ? (Syntactic/Tense)", "swim", "swimming", "run"),
 	]
 
 	print("\nTop 5 analogy predictions:")

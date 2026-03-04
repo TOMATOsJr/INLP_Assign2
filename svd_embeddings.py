@@ -109,7 +109,11 @@ class SVDEmbedding(EmbeddingModel):
 		self.embeddings = embeddings
 
 	def get_vector(self, token):
-		raise NotImplementedError
+		"""Return embedding vector for a token."""
+		if token not in self.vocab_index:
+			raise ValueError(f"Token '{token}' not in vocabulary.")
+		idx = self.vocab_index[token]
+		return self.embeddings[idx]
 
 	def most_similar(self, query, topn=1):
 		"""Return most similar tokens to the query token."""
