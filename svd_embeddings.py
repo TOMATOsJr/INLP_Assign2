@@ -11,13 +11,9 @@ class SVDEmbedding(EmbeddingModel):
 			self,
 			n_components: int = 100,
 			window_size: int = 2,
-			min_freq: int = 5,
 	):
-		if min_freq < 0:
-			raise ValueError("min_freq must be >= 0")
 		self.n_components = n_components # number of dimensions for the embedding
 		self.window_size = window_size # context window size
-		self.min_freq = min_freq # minimum frequency for tokens to be included in the vocabulary
 
 
 	def get_cooccurrence_matrix(self, corpus):
@@ -25,7 +21,7 @@ class SVDEmbedding(EmbeddingModel):
 		from collections import Counter
 
 		token_counts = Counter(token for sentence in corpus for token in sentence)
-		vocab = [token for token, count in token_counts.items() if count >= self.min_freq]
+		vocab = list(token_counts.keys())
 		vocab_index = {token: idx for idx, token in enumerate(vocab)}
 		index_vocab = {idx: token for token, idx in vocab_index.items()}
 		vocab_size = len(vocab)
@@ -149,8 +145,7 @@ class SVDEmbedding(EmbeddingModel):
 				'vocab_index': self.vocab_index,
 				'index_vocab': self.index_vocab,
 				'n_components': self.n_components,
-				'window_size': self.window_size,
-				'min_freq': self.min_freq
+				'window_size': self.window_size
 			}, path)
 			print(f"Model saved to {path}")
 		except Exception as e:
@@ -165,8 +160,7 @@ class SVDEmbedding(EmbeddingModel):
 			data = torch.load(path, weights_only=False)
 			model = cls(
 				n_components=data['n_components'],
-				window_size=data['window_size'],
-				min_freq=data['min_freq']
+				window_size=data['window_size']
 			)
 			model.embeddings = data['embeddings']
 			model.vocab_index = data['vocab_index']
@@ -190,12 +184,13 @@ class SVDEmbedding(EmbeddingModel):
 if __name__ == "__main__":
 	# Example usage
 	corpus = [[token.lower() for token in sentence] for sentence in brown.sents()]
-	# model = SVDEmbedding(n_components=30, window_size=2, min_freq=5)
+	# model = SVDEmbedding(n_components=100, window_size=2)
 	# model.train(corpus)
 	# model.save("./embeddings/svd.pt")
+	# model.save("./Assign2/embeddings/svd.pt")
 	model = SVDEmbedding.load("./embeddings/svd.pt")
 
-	tokens, scores = model.most_similar("prince", topn=10)
+	tokens, scores = model.most_similar("run", topn=10)
 
 	for token, score in zip(tokens, scores):
 		print(f"Token: {token}, Similarity: {score}")

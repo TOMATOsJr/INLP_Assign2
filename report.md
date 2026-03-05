@@ -1,27 +1,25 @@
-2.1 - Analogy evaluation
-
 ==== SVD (svd.pt) ====
 Top 5 analogy predictions:
 1. paris : france :: delhi : ? (Syntactic/Capital)
-  confederacy   0.8383
-  cathedral     0.8351
-  mexico        0.8317
-  handkerchief  0.8260
-  manure        0.8254
+  1789  0.6099
+  vigilant      0.5907
+  nameless      0.5880
+  combatant     0.5808
+  scripture     0.5645
 ---
 2. king : man :: queen : ? (Semantic/Gender)
-  woman 0.7422
-  boy   0.7321
-  still 0.7078
-  music 0.7057
-  young 0.7053
+  woman 0.6936
+  boy   0.6582
+  young 0.6547
+  girl  0.6475
+  student       0.5865
 ---
 3. swim : swimming :: run : ? (Syntactic/Tense)
-  floating      0.8182
-  ran   0.8139
-  climbed       0.8065
-  flying        0.8035
-  rode  0.7912
+  flying        0.7462
+  ran   0.6922
+  spread        0.6769
+  boat  0.6735
+  running       0.6732
 ---
 
 ==== Word2Vec (word2vec2.pt) ====
@@ -47,6 +45,7 @@ Top 5 analogy predictions:
   flow  0.4483
   wax   0.4332
 ---
+
 ==== GloVe (glove-wiki-gigaword-100) ====
 Top 5 analogy predictions:
 1. paris : france :: delhi : ? (Syntactic/Capital)
@@ -72,6 +71,7 @@ Top 5 analogy predictions:
 ---
 
 2.2 - Task 2 Bias check
+
 ==== GloVe (glove-wiki-gigaword-100) ====
 2.2 Task 2 - Pairwise cosine similarity bias check
 doctor: cos(doctor, man) = 0.6092, cos(doctor, woman) = 0.6333
