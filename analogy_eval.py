@@ -1,6 +1,8 @@
 # 2.1 + 2.2 (task 2):
 # - 2.1: Analogy predictions for SVD, Word2Vec, and GloVe
-# - 2.2 task 2: Pairwise cosine bias scores for GloVe only
+# - 2.2 task 2: Pairwise cosine bias scores for all models (SVD, Word2Vec, GloVe)
+#   previously implemented only for GloVe; now generic for any adapter
+
 
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
@@ -119,22 +121,27 @@ def cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
     return float(np.dot(vec_a, vec_b) / denom)
 
 
-def evaluate_glove_bias_pairwise(glove_adapter):
-    print(f"\n==== {glove_adapter.name} ====")
+def evaluate_bias_pairwise(adapter):
+    """Compute pairwise cosine similarity between gender anchors and bias targets.
+
+    Works with any adapter that implements ``has_token`` and ``get_vector`` (matrix or GloVe).
+    Prints results under the adapter name so users can compare SVD, Word2Vec, and GloVe.
+    """
+    print(f"\n==== {adapter.name} ====")
     print("2.2 Task 2 - Pairwise cosine similarity bias check")
 
     required = [MALE_ANCHOR, FEMALE_ANCHOR] + BIAS_TARGETS
-    missing = [word for word in required if not glove_adapter.has_token(word)]
+    missing = [word for word in required if not adapter.has_token(word)]
     if missing:
         print("Missing words in vocabulary:", ", ".join(missing))
         print("---")
         return
 
-    man_vec = glove_adapter.get_vector(MALE_ANCHOR)
-    woman_vec = glove_adapter.get_vector(FEMALE_ANCHOR)
+    man_vec = adapter.get_vector(MALE_ANCHOR)
+    woman_vec = adapter.get_vector(FEMALE_ANCHOR)
 
     for target in BIAS_TARGETS:
-        target_vec = glove_adapter.get_vector(target)
+        target_vec = adapter.get_vector(target)
         score_man = cosine_similarity(target_vec, man_vec)
         score_woman = cosine_similarity(target_vec, woman_vec)
         print(f"{target}: cos({target}, {MALE_ANCHOR}) = {score_man:.4f}, cos({target}, {FEMALE_ANCHOR}) = {score_woman:.4f}")
@@ -208,7 +215,10 @@ def main():
     evaluate_model(glove_adapter, ANALOGY_CASES, candidates=DEFAULT_CANDIDATES, topn=DEFAULT_TOPN)
 
     print("\n2.2 - Task 2 Bias check")
-    evaluate_glove_bias_pairwise(glove_adapter)
+    # run the generic bias evaluation for each model
+    evaluate_bias_pairwise(svd_adapter)
+    evaluate_bias_pairwise(word2vec_adapter)
+    evaluate_bias_pairwise(glove_adapter)
 
 
 if __name__ == "__main__":

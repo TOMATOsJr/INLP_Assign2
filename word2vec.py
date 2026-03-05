@@ -341,7 +341,7 @@ if __name__ == "__main__":
 		epochs=8,
 		batch_size=2048,
 		learning_rate=0.003,
-		min_freq=5,
+		min_freq=2,
 	)
 	model.train(
 		corpus,
